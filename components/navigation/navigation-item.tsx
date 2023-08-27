@@ -48,6 +48,7 @@ const NavigationItem = ({ id, name, imageUrl }: NavigationItemProps) => {
             fill
             alt="Channel"
             src={imageUrl}
+            className="object-cover"
           />
         </div>
       </button>
