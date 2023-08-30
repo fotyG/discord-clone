@@ -2,10 +2,19 @@
 
 import * as z from "zod";
 import axios from "axios";
+import qs from "query-string";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { ChannelType } from "@prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import {
+  Select,
+  SelectItem,
+  SelectValue,
+  SelectContent,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogTitle,
@@ -26,15 +35,22 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: "Server name is required",
-  }),
+  name: z
+    .string()
+    .min(1, {
+      message: "Channel name is required",
+    })
+    .refine((name) => name !== "general", {
+      message: "Channel name cannot be 'general'",
+    }),
+  type: z.nativeEnum(ChannelType),
 });
 
 const CreateChannelModal = () => {
   const { isOpen, onClose, type } = useModal();
 
   const router = useRouter();
+  const params = useParams();
 
   const isModalOpen = isOpen && type === "createChannel";
 
@@ -42,6 +58,7 @@ const CreateChannelModal = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      type: ChannelType.TEXT,
     },
   });
 
@@ -49,7 +66,13 @@ const CreateChannelModal = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.post("/api/servers", values);
+      const url = qs.stringifyUrl({
+        url: "/api/channels",
+        query: {
+          serverId: params?.serverId,
+        },
+      });
+      await axios.post(url, values);
 
       form.reset();
       router.refresh();
@@ -97,6 +120,38 @@ const CreateChannelModal = () => {
                         className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="type"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Channel Type</FormLabel>
+                    <Select
+                      disabled={isLoading}
+                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-zinc-300/50 border-0 focus:ring-0 text-black ring-offset-0 focus:ring-offset-0 capitalize outline-none">
+                          <SelectValue placeholder="Select a channel type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.values(ChannelType).map((type) => (
+                          <SelectItem
+                            key={type}
+                            value={type}
+                            className="capitalize"
+                          >
+                            {type.toLowerCase()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
